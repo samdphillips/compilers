@@ -1,7 +1,6 @@
-#lang nanopass
+#lang racket/base
 
-(require racket/fixnum
-         "lint.rkt"
+(require "lint.rkt"
          "pass_peval.rkt"
          "interp_lint.rkt")
 
