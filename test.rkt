@@ -20,7 +20,7 @@
       (list (make-check-info 'input-program (unparse-input ip))
             (make-check-info 'output-program (unparse-output op))
             (make-check-info 'pass (object-name p))))
-    (with-check-info* ci (λ () (check-equal? rv trv)))
+    (with-check-info* ci (λ () (check-equal? trv rv)))
     (k op iv* rv))
   (define (build* spec*)
     (match spec*
@@ -55,7 +55,7 @@
       (with-check-info (['program (car p)])        
         (test (cdr p) iv*)))))
 
-(module* main #f
+(module* test #f
   (match-define (vector mod test-dir num-inputs iterations)
     (current-command-line-arguments))
   (run-tests mod
