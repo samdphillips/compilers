@@ -25,13 +25,13 @@
     [else (introduce-temp e)])
 
   (rco-expr : Expr (e) -> Expr ()
-    [(- ,e) (define-values (v b) (rco-atom e))
-            (build-let b (in-context Prim `(- ,v)))]
-    [(+ ,e0 ,e1) (define-values (i b0) (rco-atom e0))
-                 (define-values (j b1) (rco-atom e1))
-                 (build-let (append b1 b0)
-                            (in-context Prim `(+ ,i ,j)))]
-    [(- ,e0 ,e1) (define-values (i b0) (rco-atom e0))
-                 (define-values (j b1) (rco-atom e1))
-                 (build-let (append b1 b0)
-                            (in-context Prim `(- ,i ,j)))]))
+    [(- ,[rco-atom : e -> atm b])
+     (build-let b (in-context Prim `(- ,atm)))]
+    [(+ ,[rco-atom : e0 -> atm0 b0]
+        ,[rco-atom : e1 -> atm1 b1])
+     (build-let (append b1 b0)
+                (in-context Prim `(+ ,atm0 ,atm1)))]
+    [(- ,[rco-atom : e0 -> atm0 b0]
+        ,[rco-atom : e1 -> atm1 b1])
+     (build-let (append b1 b0)
+                (in-context Prim `(- ,atm0 ,atm1)))]))

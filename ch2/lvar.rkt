@@ -1,6 +1,8 @@
 #lang nanopass
 
-(provide (all-defined-out))
+(provide Lvar
+         parse
+         unparse-Lvar)
 
 (define variable? symbol?)
 

@@ -6,6 +6,10 @@
 (provide interp)
 
 (define-pass interp : Lvar (e) -> * ()
+  (interp-atom : Atom (a r) -> * ()
+    [,x (hash-ref r x)]
+    [,i i])
+
   (interp-prim : Prim (p r) -> * ()
     [(read) (define v (read))
             (unless (fixnum? v)
@@ -20,9 +24,6 @@
                  (define v1 (interp-expr e1 r))
                  (fx- v0 v1)])
   (interp-expr : Expr (e r) -> * ()
-    [,i i]
-    [,x (hash-ref r x)]
-    [,prim (interp-prim prim r)]
-    [(let (,x ,e) ,b) (define v (interp-expr e r))
-                      (interp-expr b (hash-set r x v))])
+    [(let (,x ,[interp-expr : e r -> v]) ,b)
+     (interp-expr b (hash-set r x v))])
   (interp-expr e (hash)))
