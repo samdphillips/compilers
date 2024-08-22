@@ -1,7 +1,7 @@
 #lang nanopass
 
-(require racket/fixnum
-         "lvar.rkt")
+(require "lvar.rkt"
+         "primitives.rkt")
 
 (provide interp)
 
@@ -11,18 +11,12 @@
     [,i i])
 
   (interp-prim : Prim (p r) -> * ()
-    [(read) (define v (read))
-            (unless (fixnum? v)
-              (error 'interp "read expected a fixnum ~v" v))
-            v]
-    [(- ,e) (define v (interp-expr e r))
-            (fx- 0 v)]
-    [(+ ,e0 ,e1) (define v0 (interp-expr e0 r))
-                 (define v1 (interp-expr e1 r))
-                 (fx+ v0 v1)]
-    [(- ,e0 ,e1) (define v0 (interp-expr e0 r))
-                 (define v1 (interp-expr e1 r))
-                 (fx- v0 v1)])
+    [(prim-app ,op ,e* ...)
+     (define e^
+       (for/list ([e (in-list e*)])
+         (interp-expr e r)))
+     (apply-prim op e^)])
+
   (interp-expr : Expr (e r) -> * ()
     [(let (,x ,[interp-expr : e r -> v]) ,b)
      (interp-expr b (hash-set r x v))])

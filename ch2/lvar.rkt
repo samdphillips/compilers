@@ -6,20 +6,23 @@
 
 (define variable? symbol?)
 
+(define (prim-name? v)
+  (match v
+    [(or 'read '+ '-) #t]
+    [_ #f]))
+
 (define-language Lvar
   (entry Expr)
   (terminals
    (fixnum (i))
-   (variable (x)))
+   (variable (x))
+   (prim-name (op)))
   (Atom (atm) i x)
-  (Prim (prim)
-        (read)
-        (+ e0 e1)
-        (- e)
-        (- e0 e1))
+  (Prim (p)
+        (prim-app op e ...))
   (Expr (e b)
         atm
-        prim
+        p
         (let (x e0) e1)))
 
 (define-pass parse : * (s) -> Lvar ()
@@ -36,10 +39,10 @@
                ,(do-parse body))]
            [s (with-output-language (Lvar Prim)
                 (match s
-                  [(list 'read) `(read)]
-                  [(list '- e) `(- ,(do-parse e))]
-                  [(list '- e0 e1) `(- ,(do-parse e0)
-                                       ,(do-parse e1))]
-                  [(list '+ e0 e1) `(+ ,(do-parse e0)
-                                       ,(do-parse e1))]))]))))
+                  [(list 'read) `(prim-app read)]
+                  [(list '- e) `(prim-app - ,(do-parse e))]
+                  [(list '- e0 e1) `(prim-app - ,(do-parse e0)
+                                              ,(do-parse e1))]
+                  [(list '+ e0 e1) `(prim-app + ,(do-parse e0)
+                                              ,(do-parse e1))]))]))))
   (do-parse s))

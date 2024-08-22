@@ -25,13 +25,6 @@
     [else (introduce-temp e)])
 
   (rco-expr : Expr (e) -> Expr ()
-    [(- ,[rco-atom : e -> atm b])
-     (build-let b (in-context Prim `(- ,atm)))]
-    [(+ ,[rco-atom : e0 -> atm0 b0]
-        ,[rco-atom : e1 -> atm1 b1])
-     (build-let (append b1 b0)
-                (in-context Prim `(+ ,atm0 ,atm1)))]
-    [(- ,[rco-atom : e0 -> atm0 b0]
-        ,[rco-atom : e1 -> atm1 b1])
-     (build-let (append b1 b0)
-                (in-context Prim `(- ,atm0 ,atm1)))]))
+    [(prim-app ,op ,[rco-atom : e* -> atm* b*] ...)
+     (build-let (apply append b*)
+                `(prim-app ,op ,atm* ...))]))
