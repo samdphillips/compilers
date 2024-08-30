@@ -1,22 +1,18 @@
 #lang nanopass
 
+(require "common.rkt")
+
 (provide Lvar
          parse
          unparse-Lvar)
-
-(define variable? symbol?)
-
-(define (prim-name? v)
-  (match v
-    [(or 'read '+ '-) #t]
-    [_ #f]))
 
 (define-language Lvar
   (entry Expr)
   (terminals
    (fixnum (i))
    (variable (x))
-   (prim-name (op)))
+   (primitive-name (op)))
+
   (Atom (atm) i x)
   (Prim (p)
         (prim-app op e ...))

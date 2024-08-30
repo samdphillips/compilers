@@ -1,24 +1,18 @@
 #lang nanopass
 
+(require "common.rkt")
+
 (provide Cvar
          unparse-Cvar)
-
-(define label? symbol?)
-(define var? symbol?)
-
-(define (prim-name? v)
-  (match v
-    [(or 'read '+ '-) #t]
-    [_ #f]))
 
 (define-language Cvar
   (entry Program)
   (terminals
    [hash (info)]
    [label (lbl)]
-   [var (v x)]
+   [variable (v x)]
    [fixnum (i)]
-   [prim-name (op)])
+   [primitive-name (op)])
 
   (Atom (atm) i x)
 
