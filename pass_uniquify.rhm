@@ -1,25 +1,19 @@
 #lang rhombus/static
 
 import:
-  "lvar.rhm" as Lvar
-  lib("racket/base.rkt"):
-    only gensym
-    expose gensym
+  "lvar.rhm" open
 
-export uniquify_program
+export uniquify
 
-fun uniquify_expr(expr :: Lvar.Expr,
-                  renames :: Map.of(Symbol, Symbol)) :: Lvar.Expr:
+fun uniquify(expr :: Lvar.Expr,
+             renames :: Map.of(Symbol, Symbol) = {}) :: Lvar.Expr:
   match expr
   | n :: Int: n
   | x :: Symbol: renames[x]
-  | Lvar.Prim(_, [arg, ...]):
-      (expr :~ Lvar.Prim) with (args = [uniquify_expr(arg, renames), ...])
+  | Lvar.Prim(_, [args, ...]):
+      (expr :~ Lvar.Prim) with (args = [uniquify(args, renames), ...])
   | Lvar.Let(var, rhs, body):
-      let new_var = gensym(var)
-      let new_rhs = uniquify_expr(rhs, renames)
-      let new_body = uniquify_expr(body, renames ++ {var: new_var})
+      let new_var = Symbol.gen(var)
+      let new_rhs = uniquify(rhs, renames)
+      let new_body = uniquify(body, renames ++ {var: new_var})
       Lvar.Let(new_var, new_rhs, new_body)
-
-fun uniquify_program(pgm :: Lvar.Program) :: Lvar.Program:
-  pgm with (expr = uniquify_expr(pgm.expr, {}))

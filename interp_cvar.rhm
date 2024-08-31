@@ -10,9 +10,9 @@ export:
   rename interp_cvar_program as run
 
 fun
-| do_prim(#'#{+}, [a, b]): a + b
-| do_prim(#'#{-}, [a]): - a
-| do_prim(#'#{-}, [a, b]): a - b
+| do_prim(#'add, [a, b]): a + b
+| do_prim(#'negate, [a]): 0 - a
+| do_prim(#'sub, [a, b]): a - b
 | do_prim(#'read, []): read()
 
 fun interp_atom(expr :: Atom, binds :: MutableMap):

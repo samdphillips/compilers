@@ -1,17 +1,16 @@
 #lang rhombus/static
 
 import:
-  "lvar.rhm" as Lvar
+  "lvar.rhm" open
   "cvar.rhm" as Cvar
-  "pass_rco.rhm" open
 
-export explicate_program
+export explicate
 
-fun explicate_assign(expr :: Lvar.M.Expr,
+fun explicate_assign(expr :: Lvar_mon.Expr,
                      var :: Symbol,
                      cont :: Cvar.Block) :: Cvar.Block:
   match expr
-  | v :: Lvar.Atom:
+  | v :: Lvar_mon.Atom:
       [Cvar.Assign(var, v), &cont]
   | Lvar.Prim(op, args):
       [Cvar.Assign(var, Cvar.Prim(op, args)), &cont]
@@ -19,7 +18,7 @@ fun explicate_assign(expr :: Lvar.M.Expr,
       let new_cont = explicate_assign(body, var, cont)
       explicate_assign(e, x, new_cont)
 
-fun explicate_tail(expr :: Lvar.M.Expr) :: Cvar.Block:
+fun explicate_tail(expr :: Lvar_mon.Expr) :: Cvar.Block:
   match expr
   | v :: Lvar.Atom: [Cvar.Return(v)]
   | Lvar.Prim(op, args):
@@ -32,10 +31,9 @@ fun record_vars(block :: Cvar.Block) :: Set.of(Symbol):
   for values(s :: Set = Set{}) (stmt: block):
     match stmt
     | Cvar.Assign(x, _): s ++ {x}
-    | _: s  
+    | _: s
 
-fun explicate_program(pgm :: Lvar.M.Program):
-  let section = explicate_tail(pgm.expr)
-  Cvar.Program(pgm.info ++ {#'vars: record_vars(section)},
+fun explicate(expr :: Lvar_mon.Expr):
+  let section = explicate_tail(expr)
+  Cvar.Program({#'vars: record_vars(section)},
                {#'start: section})
-

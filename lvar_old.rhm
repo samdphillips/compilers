@@ -1,0 +1,79 @@
+#lang rhombus/static/and_meta
+
+export:
+  Atom
+  Expr
+  Program
+  Prim
+  Let
+  M
+
+annot.macro 'Atom': 'Int || Symbol'
+class Prim(op :: Symbol, args :: List)
+class Let(var :: Symbol, expr, body)
+
+fun make_is_expr(is_prim_child):
+  fun _is_expr(v):
+    match v
+    | _ :: Atom: #true
+    | Let(_, e, body):
+        _is_expr(e) && _is_expr(body)
+    | Prim(_, [arg, ...]):
+        all(is_prim_child(arg), ...)
+    | _: #false
+  _is_expr
+
+def is_lvar_expr:
+  make_is_expr(fun (v): is_lvar_expr(v))
+annot.macro 'Expr': 'satisfying(is_lvar_expr)'
+
+namespace M:
+  export Expr Program
+  def is_expr:
+    make_is_expr(fun (v): v is_a Atom)
+  annot.macro 'Expr': 'satisfying(is_expr)'
+  annot.macro 'Program':
+    'Program.of(Map, Expr)'
+
+class Program(info :: Map, expr):
+  export read
+
+  fun read(e):
+    read_program(e)
+
+syntax_class PrimOp:
+| '+'
+| '-'
+
+syntax_class PrimFun:
+  fields:
+    name
+    [arg, ...]
+| 'read()':
+    field name: 'read'
+    field [arg, ...]: []
+
+fun read_program(e :: Syntax) :: Program:
+  Program({}, read_expr(e))
+
+fun read_expr(e :: Syntax) :: Expr:
+  match e
+  | '$(n :: Int)': n.unwrap()
+  | '$(v :: Identifier)': v.unwrap()
+  | '($e)': read_expr(e)
+  | 'let $(var :: Identifier) = $v ...: $b ...':
+      Let(var.unwrap(), read_expr('$v ...'), read_expr('$b ...'))
+  | '- $a $b':
+      read_expr_cont(Prim('-', [read_expr(a)]), b)
+  | '$a $(op :: PrimOp) $b':
+      read_expr_cont(read_expr(a), '$op $b')
+  | '$(f :: PrimFun)':
+      Prim(f.name.unwrap(), [read_expr(f.arg), ...])
+
+fun read_expr_cont(head :: Expr, rest :: Syntax) :: Expr:
+  match rest
+  | '': head
+  | '$(op :: PrimOp) $(f :: PrimFun) $c':
+      read_expr_cont(Prim(op.unwrap_op(), [head, read_expr(f)]), c)
+  | '$(op :: PrimOp) $b $c':
+      read_expr_cont(Prim(op.unwrap_op(), [head, read_expr(b)]), c)

@@ -1,0 +1,71 @@
+#lang rhombus/static/and_meta
+
+export:
+  Node
+  Lvar
+  Lvar_mon
+
+class Node(tag :: Symbol,
+           info :: Map.of(Symbol, Any) = {},
+           children :: List = []):
+  export of
+  internal _Node
+  annot.macro 'of($name, $child_ann, ...)':
+    '_Node.of(matching($name),
+              Map,
+              matching([_ :: $child_ann, ...]))'
+
+annot.macro 'Atom': 'Int || Symbol'
+
+fun make_is_expr(is_prim_child):
+  fun _is_expr(v):
+    match v
+    | _ :: Atom: #true
+    | Node(#'let, _, [_, e, body]):
+        _is_expr(e) && _is_expr(body)
+    | Node(#'prim_app, _, [_, [arg, ...]]):
+        all(is_prim_child(arg), ...)
+    | _: #false
+  _is_expr
+
+
+namespace Lvar:
+  export Atom Expr Prim Let
+
+  def is_expr:
+    make_is_expr(fun (v): is_expr(v))
+  annot.macro 'Expr': 'satisfying(is_expr)'
+
+  /* This mostly works but if there is a binding like:
+     def Prim(opname, arg, ...) = ???
+
+     the repetition raises an error:
+     ...: misuse outside of a binding in: ...
+  */
+  bind.macro 'Prim($name, $args, ...)':
+    'Node(#'prim_app, _, [$name :~ Symbol, [$args :~ Expr, ...]])'
+  annot.macro 'Prim': 'Node.of(#'prim_app, Symbol, List.of(Expr))'
+  fun Prim(name :: Symbol, &arg :: List.of(Expr)):
+    Node(#'prim_app, {}, [name, arg])
+
+  bind.macro 'Let($var, $expr, $body)':
+    'Node(#'let, _, [$var :~ Symbol, $expr :~ Expr, $body :~ Expr])'
+  annot.macro 'Let': 'Node.of(#'let, Symbol, Expr, Expr)'
+  fun Let(var :: Symbol, expr :: Expr, body :: Expr):
+    Node(#'let, {}, [var, expr, body])
+
+
+namespace Lvar_mon:
+  export Atom Expr Prim Let
+
+  def is_expr:
+    make_is_expr(fun (v): v is_a Atom)
+  annot.macro 'Expr': 'satisfying(is_expr)'
+
+  annot.macro 'Prim': 'Node.of(#'prim_app, Symbol, List.of(Atom))'
+  fun Prim(name :: Symbol, &arg :: List.of(Atom)):
+    Node(#'prim_app, {}, [name, arg])
+
+  annot.macro 'Let': 'Node.of(#'let, Symbol, Expr, Expr)'
+  fun Let(var :: Symbol, expr :: Expr, body :: Expr):
+    Node(#'let, {}, [var, expr, body])

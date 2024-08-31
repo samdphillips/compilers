@@ -11,10 +11,13 @@ export:
   Program
 
 annot.macro 'Atom': 'Int || Symbol'
+
 class Prim(op :: Symbol, args :: List.of(Atom))
+
 annot.macro 'Expr': 'Atom || Prim'
 
 class Assign(var :: Symbol, expr :: Expr)
+
 annot.macro 'Stmt': 'Assign'
 
 class Return(expr :: Expr)

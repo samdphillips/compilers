@@ -1,0 +1,41 @@
+#lang rhombus/static/and_meta
+
+import "lvar.rhm" open
+
+export:
+  rename read_expr as parse_lvar_expr
+
+syntax_class PrimOp:
+  fields: name
+| '+': field name: #'add
+| '-': field name: #'sub
+
+syntax_class PrimFun:
+  fields:
+    name
+    [arg, ...]
+| 'read()':
+    field name: #'read
+    field [arg, ...]: []
+
+fun read_expr(e :: Syntax) :: Lvar.Expr:
+  match e
+  | '$(n :: Int)': n.unwrap()
+  | '$(v :: Identifier)': v.unwrap()
+  | '($e)': read_expr(e)
+  | 'let $(var :: Identifier) = $v ...: $b ...':
+      Lvar.Let(var.unwrap(), read_expr('$v ...'), read_expr('$b ...'))
+  | '- $a $b':
+      read_expr_cont(Lvar.Prim(#'negate, [read_expr(a)]), b)
+  | '$a $(op :: PrimOp) $b':
+      read_expr_cont(read_expr(a), '$op $b')
+  | '$(f :: PrimFun)':
+      Lvar.Prim(f.name, [read_expr(f.arg), ...])
+
+fun read_expr_cont(head :: Lvar.Expr, rest :: Syntax) :: Lvar.Expr:
+  match rest
+  | '': head
+  | '$(op :: PrimOp) $(f :: PrimFun) $c':
+      read_expr_cont(Lvar.Prim(op.name, [head, read_expr(f)]), c)
+  | '$(op :: PrimOp) $b $c':
+      read_expr_cont(Lvar.Prim(op.name, [head, read_expr(b)]), c)
