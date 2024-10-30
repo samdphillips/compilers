@@ -1,0 +1,49 @@
+#lang rhombus/static/and_meta
+
+import:
+  "cvar.rhm" as Cvar
+  "arm64.rhm":
+    expose Var
+    rename Var as Arm_var
+
+export select_instructions
+
+annot.macro 'Dest':
+  '(Arm_var.Reg || Arm_var.Deref || Symbol)'
+
+fun si_atom :: Symbol || Arm_var.Imm
+| si_atom(var :: Symbol): var
+| si_atom(n :: Int): Arm_var.Imm(n)
+
+fun si_assign :: List.of(Arm_var.Instr)
+| si_assign(atm :: Cvar.Atom, dest :: Dest):
+    [Arm_var.mov(dest, si_atom(atm))]
+| si_assign(Cvar.Prim(#'read, []), dest :: Dest):
+    [Arm_var.Call(#'read_int, 0),
+     Arm_var.mov(dest, Arm_var.Reg(#'x0))]
+| si_assign(Cvar.Prim(#'add, [a :: Int, b :: Int]), dest :: Dest):
+    def w8 = Arm_var.Reg(#'w8)
+    [Arm_var.mov(w8, a),
+     Arm_var.add(dest, w8, b)]
+| si_assign(Cvar.Prim(#'add, [a :: Int, b]), dest :: Dest):
+    si_assign(Cvar.Prim(#'add, [b, a]),  dest)
+| si_assign(Cvar.Prim(#'add, [a, b]), dest :: Dest):
+    [Arm_var.add(dest, si_atom(a), si_atom(b))]
+| si_assign(e, d):
+    showln(~pretty: #true, [e, "->", d])
+    #void
+
+fun si_tail :: List.of(Arm_var.Instr)
+| si_tail([Cvar.Return(expr)]):
+    si_assign(expr, Arm_var.Reg(#'x0)).add(Arm_var.Jmp(#'conclusion))
+| si_tail([Cvar.Assign(var, expr), &cont]):
+    si_assign(expr, var) ++ si_tail(cont)
+
+fun si_block(block :: Cvar.Block) :: Arm_var.Block:
+  def instrs = si_tail(block)
+  Arm_var.Block({}, instrs)
+
+fun select_instructions(pgm :: Cvar.Program) :: Arm_var.Program:
+  def {names: blocks, ...} = pgm.blocks
+  Arm_var.Program(pgm.info,
+                  {names: si_block(blocks), ...})

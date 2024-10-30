@@ -1,16 +1,6 @@
 #lang rhombus/static/and_meta
 
 export:
-  Reg
-  Imm
-  Deref
-  Instr
-  Call
-  Jmp
-  Ret
-  Block
-  Program
-
   Var
 
 class Reg(name :: Symbol)
@@ -25,22 +15,50 @@ class Instr(name :: Symbol, arg :: List):
     'fun $name($arg.parsed, ...) :: Instr:
        Instr(#'$name, [$a_name, ...])'
 
+Instr.def add(dest, src1, src2)
+Instr.def sub(dest, src1, src2)
+Instr.def neg(dest, src)
+Instr.def mov(dest, src)
+Instr.def ldr(dest, src)
+Instr.def str(src, dest)
+Instr.def stp(src1, src2, dest)
+Instr.def ldp(dest1, dest2, src)
+
 class Call(label :: Symbol, nargs :: Int)
 class Jmp(label :: Symbol)
 class Ret()
 
-class Block(info :: Map, instrs :: List.of(Instr))
-class Program(info :: Map, blocks :: Map.of(Symbol, Block))
+class Block(info :: Map.of(Symbol, Any), instrs)
+class Program(info :: Map.of(Symbol, Any), blocks :: Map.of(Symbol, Block))
 
-annot.macro '_Reg': 'Reg'
+fun make_is_instr(is_dest, is_source):
+  annot.macro 'S': 'satisfying(is_source)'
+  annot.macro 'D': 'satisfying(is_dest)'
+  fun
+  | (Instr(#'add, [_ :: D, _ :: S, _ :: S])
+       || Instr(#'sub, [_ :: D, _ :: S, _ :: S])
+       || Instr(#'neg, [_ :: D, _ :: S])
+       || Instr(#'mov, [_ :: D, _ :: S])
+       || Instr(#'ldr, [_ :: D, _ :: S])
+       || Instr(#'str, [_ :: S, _ :: D])
+       || Instr(#'stp, [_ :: S, _ :: S, _ :: D])
+       || Instr(#'ldp, [_ :: D, _ :: D, _ :: S])):
+      #true
+  | (_): #false
 
 namespace Var:
-  export all_defined:
-    only_space expr
-  annot.macro 'Dest': '_Reg || Deref || Symbol'
-  annot.macro 'Source': '_Reg || Deref || Imm || Symbol'
-  
-  Instr.def add(dest :: Dest, src1 :: Source, src2 :: Source || Imm)
-  Instr.def subs(dest :: Dest, src1 :: Source, src2 :: Source || Imm)
-  Instr.def neg(dest :: Dest, src :: Source)
-  Instr.def mov(dest :: Dest, src :: Source)
+  export:
+    Program Block Reg Imm Deref Call Jmp Ret
+    add sub neg mov str ldr stp ldp
+    except_space annot: Instr Block
+    only_space annot:
+      rename _Instr as Instr
+      rename _Block as Block
+
+  def is_instr:
+    make_is_instr(fun(v): v is_a (Reg || Deref || Symbol),
+                  fun(v): v is_a (Reg || Deref || Imm || Symbol))
+  annot.macro '_Instr':
+    '(Instr && satisfying(is_instr)) || Call || Jmp || Ret'
+  annot.macro '_Block':
+    'Block.of(Map.of(Symbol, Any), List.of(_Instr))'

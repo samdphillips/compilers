@@ -6,17 +6,28 @@ import:
   "pass_uniquify.rhm" open
   "pass_rco.rhm" open
   "pass_explicate.rhm" open
+  "pass_select.rhm" open
   "interp_cvar.rhm"
 
 fun dbg(v):
   showln(v, ~pretty: #true)
   v
 
+#//
 'let x = 32:
    let y = 10 + read():
      x + y'
   |> parse_lvar_expr
   |> uniquify
   |> remove_complex_operations
-  |> explicate |> dbg
-  |> interp_cvar.run(_, #'start)
+  |> dbg |> explicate |> dbg
+  |> select_instructions
+
+'let a = 42:
+   let b = a:
+     b'
+  |> parse_lvar_expr
+  |> uniquify
+  |> remove_complex_operations
+  |> dbg |> explicate |> dbg
+  |> select_instructions

@@ -6,8 +6,7 @@ import:
     only read
     expose read
 
-export:
-  rename interp_cvar_program as run
+export run
 
 fun
 | do_prim(#'add, [a, b]): a + b
@@ -15,35 +14,42 @@ fun
 | do_prim(#'sub, [a, b]): a - b
 | do_prim(#'read, []): read()
 
-fun interp_atom(expr :: Atom, binds :: MutableMap):
-  match expr
-  | n :: Int: n
-  | x :: Symbol:
-      match binds[x]
-      | #void: error("unbound var: " +& x)
-      | v: v
+class Interp():
+  private field binds :: MutableMap = MutableMap{}
 
-fun interp_expr(expr :: Expr, binds :: MutableMap):
-  match expr
-  | _ :: Atom: interp_atom(expr, binds)
-  | Prim(op, [arg, ...]):
-      do_prim(op, [interp_atom(arg, binds), ...])
+  method interp_atom(expr :: Atom):
+    match expr
+    | n :: Int: n
+    | x :: Symbol:
+        match binds[x]
+        | #void: error("unbound var: " +& x)
+        | v: v
 
-fun interp_cvar_stmt(stmt :: Stmt, binds :: MutableMap):
-  match stmt
-  | Assign(var, expr):
-      binds[var] := interp_expr(expr, binds)
+  method interp_expr(expr :: Expr):
+    match expr
+    | _ :: Atom: interp_atom(expr)
+    | Prim(op, [args, ...]):
+        // methods act weird with repetitions, but functions work
+        fun do_atom(e): interp_atom(e)
+        do_prim(op, [do_atom(args), ...])
 
-fun interp_cvar_section(insts :: Block, binds :: MutableMap):
-  match insts
-  | [Return(e)]:
-      interp_expr(e, binds)
-  | [stmt, &cont]:
-      interp_cvar_stmt(stmt, binds)
-      interp_cvar_section(cont, binds)
+  method interp_cvar_stmt(stmt :: Stmt):
+    match stmt
+    | Assign(var, expr):
+        binds[var] := interp_expr(expr)
 
-fun interp_cvar_program(pgm :: Program, label :: Symbol):
-  def binds = MutableMap{}
-  for (v: (pgm.info[#'vars] :~ Set)):
-      binds[v] := #void
-  interp_cvar_section(pgm.blocks[label], binds)
+  method interp_cvar_section(insts :: Block):
+    match insts
+    | [Return(expr)]:
+        interp_expr(expr)
+    | [stmt, &cont]:
+        interp_cvar_stmt(stmt)
+        interp_cvar_section(cont)
+
+  method run(pgm :: Program, label :: Symbol):
+    for (v: (pgm.info[#'vars] :~ Set)):
+        binds[v] := #void
+    interp_cvar_section(pgm.blocks[label])
+
+fun run(pgm :: Program, label :: Symbol):
+  Interp().run(pgm, label)
