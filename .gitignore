@@ -1,5 +1,5 @@
 .DS_Store
 .idea
 *.log
-tmp/
 compiled/
+tmp/
